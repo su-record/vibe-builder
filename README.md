@@ -43,8 +43,27 @@ The project will evolve into a comprehensive service with the following architec
 1. **Ideation**: Users describe their project idea in natural language.
 2. **Architecture**: AI architect suggests necessary routes and page structures.
 3. **Wireframing / Vision**: AI designs blueprints. Users can upload **images/sketches** which Gemini 3.0 analyzes to generate pixel-perfect layouts.
-4. **Review**: AI acts as a PM to review logical gaps (e.g., missing auth pages).
+4. **Review**: AI acts as a PM to review logical gaps (e.g., forgotten auth pages).
 5. **Generation**: The system outputs a production-ready codebase including API specs (OpenAPI) and DB Schemas.
+
+## 🔧 Local Development Setup
+
+To run Vibe Builder locally after cloning the repository:
+
+1.  **Install Dependencies**:
+    ```bash
+    npm install
+    ```
+2.  **Configure API Key**:
+    Create a `.env` file in the root directory and add your Google Gemini API Key:
+    ```env
+    VITE_GOOGLE_API_KEY=your_api_key_here
+    ```
+    > **Note**: You can get a free API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+3.  **Run Development Server**:
+    ```bash
+    npm run dev
+    ```
 
 ---
 

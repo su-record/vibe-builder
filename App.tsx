@@ -1,12 +1,11 @@
 
-
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import ProjectForm from './components/ProjectForm';
 import Sidebar from './components/Sidebar';
 import WireframeBuilder from './components/WireframeBuilder';
 import ReviewFeedback from './components/ReviewFeedback';
-import TechStackSelect from './components/TechStackSelect';
+import TechStackSelect from './components/TechStackSelect'; // Kept for type safety if needed, though step removed in logic
 import ResultViewer from './components/ResultViewer';
 import { ProjectData, AppStep, View, WireframeComponent, Language, BuildResult, TechStack } from './types';
 import { Loader2 } from 'lucide-react';
@@ -24,9 +23,15 @@ const App: React.FC = () => {
   const [techStack, setTechStack] = useState<TechStack | null>(null);
   const [buildResult, setBuildResult] = useState<BuildResult | null>(null);
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   // Updated to use the latest pro model for better reasoning and coding capabilities
   const model = "gemini-3-pro-preview";
+
+  // Helper to get AI instance with current key
+  const getAI = () => {
+    // Support both AI Studio (process.env) and Local Vite (import.meta.env)
+    const apiKey = process.env.API_KEY || (import.meta as any).env?.VITE_GOOGLE_API_KEY;
+    return new GoogleGenAI({ apiKey });
+  };
 
   // Helper to convert File to Gemini InlineData
   const fileToGenerativePart = (file: File): Promise<any> => {
@@ -49,6 +54,7 @@ const App: React.FC = () => {
   // Initial Route Generation
   const generateViews = async (data: ProjectData) => {
     try {
+      const ai = getAI();
       const prompt = language === 'ko' 
         ? `
           프로젝트 이름: ${data.name}
@@ -151,6 +157,7 @@ const App: React.FC = () => {
     setViews(prev => prev.map(v => v.id === view.id ? { ...v, isGeneratingLayout: true } : v));
 
     try {
+      const ai = getAI();
       const prompt = language === 'ko'
         ? `
           페이지 이름: ${view.name}
@@ -228,6 +235,7 @@ const App: React.FC = () => {
     setViews(prev => prev.map(v => v.id === viewId ? { ...v, isGeneratingLayout: true } : v));
 
     try {
+      const ai = getAI();
       const currentLayoutJson = JSON.stringify(view.layout.map(({ type, label, description }) => ({ type, label, description })));
       
       const prompt = language === 'ko'
@@ -306,6 +314,7 @@ const App: React.FC = () => {
   const handleGenerateReview = async () => {
     setStep(AppStep.REVIEWING);
     try {
+      const ai = getAI();
       // Serialize view data for AI analysis
       const projectSummary = JSON.stringify({
          project: projectData,
@@ -362,6 +371,7 @@ const App: React.FC = () => {
   const handleApplyImprovements = async () => {
     setStep(AppStep.GENERATING_VIEWS); // Re-use generating views loading state
     try {
+      const ai = getAI();
       const currentViewsSummary = JSON.stringify(views.map(v => ({
         name: v.name,
         route: v.route,
@@ -448,6 +458,7 @@ const App: React.FC = () => {
     setStep(AppStep.GENERATING_CODE);
 
     try {
+      const ai = getAI();
       // 1. Prepare Image Parts from Custom Uploads
       const imageParts: any[] = [];
       const viewsWithFiles = views.filter(v => v.customFiles && v.customFiles.length > 0);
