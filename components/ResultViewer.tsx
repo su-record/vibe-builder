@@ -88,6 +88,22 @@ const ResultViewer: React.FC<ResultViewerProps> = ({
     }
   };
 
+  // Helper to ensure Tailwind CSS is present in the preview
+  const getPreviewHtml = (html: string) => {
+    if (!html) return '';
+    // If specifically missing the CDN
+    if (!html.includes('cdn.tailwindcss.com')) {
+      const script = '<script src="https://cdn.tailwindcss.com"></script>';
+      // Inject into head if it exists
+      if (html.includes('<head>')) {
+        return html.replace('<head>', `<head>${script}`);
+      }
+      // Otherwise prepend
+      return `${script}${html}`;
+    }
+    return html;
+  };
+
   // Helper: Generate Project Structure for GitHub/Zip
   const generateFiles = () => {
     const files: { path: string, content: string, mode?: '100644' | '100755' }[] = [];
@@ -539,7 +555,7 @@ const ResultViewer: React.FC<ResultViewerProps> = ({
               <div className="flex-1 bg-white relative">
                 <iframe 
                     key={activePreviewPage.route} // Force re-render on page change
-                    srcDoc={activePreviewPage.previewHtml}
+                    srcDoc={getPreviewHtml(activePreviewPage.previewHtml)}
                     className="w-full h-full border-0"
                     title="Preview"
                     sandbox="allow-scripts"

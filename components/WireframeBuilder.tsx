@@ -228,6 +228,7 @@ const WireframeBuilder: React.FC<WireframeBuilderProps> = ({
   const [activeComponentId, setActiveComponentId] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [refineInstruction, setRefineInstruction] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
   const palette = getLocalizedPalette(language as Language);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -266,6 +267,30 @@ const WireframeBuilder: React.FC<WireframeBuilderProps> = ({
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && onUpdateView) {
       const newFiles = Array.from(e.target.files);
+      const currentFiles = view.customFiles || [];
+      onUpdateView(view.id, { customFiles: [...currentFiles, ...newFiles] });
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0 && onUpdateView) {
+      const newFiles = Array.from(e.dataTransfer.files);
       const currentFiles = view.customFiles || [];
       onUpdateView(view.id, { customFiles: [...currentFiles, ...newFiles] });
     }
@@ -556,7 +581,17 @@ const WireframeBuilder: React.FC<WireframeBuilderProps> = ({
                    </h3>
                    <div 
                       onClick={() => fileInputRef.current?.click()}
-                      className="border-2 border-dashed border-slate-700 rounded-xl bg-slate-950/50 hover:bg-slate-800/30 hover:border-purple-500/50 transition-all cursor-pointer p-10 flex flex-col items-center justify-center text-center group"
+                      onDragOver={handleDragOver}
+                      onDragEnter={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      className={`
+                        border-2 border-dashed rounded-xl transition-all cursor-pointer p-10 flex flex-col items-center justify-center text-center group
+                        ${isDragging 
+                            ? 'border-purple-500 bg-purple-500/10 scale-[1.02]' 
+                            : 'border-slate-700 bg-slate-950/50 hover:bg-slate-800/30 hover:border-purple-500/50'
+                        }
+                      `}
                    >
                       <input 
                          type="file" 
@@ -565,11 +600,17 @@ const WireframeBuilder: React.FC<WireframeBuilderProps> = ({
                          ref={fileInputRef} 
                          onChange={handleFileUpload} 
                       />
-                      <div className="h-16 w-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                         <Upload className="h-8 w-8 text-slate-500 group-hover:text-purple-400" />
+                      <div className={`
+                        h-16 w-16 rounded-full border flex items-center justify-center mb-4 transition-transform
+                        ${isDragging ? 'bg-purple-500/20 border-purple-500 scale-110' : 'bg-slate-900 border-slate-800 group-hover:scale-110'}
+                      `}>
+                         <Upload className={`h-8 w-8 transition-colors ${isDragging ? 'text-purple-400' : 'text-slate-500 group-hover:text-purple-400'}`} />
                       </div>
-                      <p className="text-slate-300 font-medium mb-1">
-                         {language === 'ko' ? '파일을 클릭하여 업로드하세요' : 'Click to upload files'}
+                      <p className={`font-medium mb-1 transition-colors ${isDragging ? 'text-purple-300' : 'text-slate-300'}`}>
+                         {isDragging 
+                            ? (language === 'ko' ? '파일을 여기에 놓으세요' : 'Drop files here')
+                            : (language === 'ko' ? '파일을 클릭하거나 드래그하여 업로드하세요' : 'Click or drag files to upload')
+                         }
                       </p>
                       <p className="text-sm text-slate-500">
                          PNG, JPG, PDF, Figma exports

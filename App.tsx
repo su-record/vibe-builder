@@ -55,30 +55,29 @@ const App: React.FC = () => {
   const generateViews = async (data: ProjectData) => {
     try {
       const ai = getAI();
-      const prompt = language === 'ko' 
-        ? `
-          프로젝트 이름: ${data.name}
-          설명: ${data.description}
-          
-          시니어 웹 아키텍트로서 행동하세요. 프로젝트 설명을 바탕으로 4~8개의 필수 페이지 뷰(라우트) 목록을 생성해주세요.
-          
-          중요 규칙:
-          1. 사용자 계정이 필요한 앱이라면(대부분 그렇듯), 반드시 '로그인(Login)'과 '회원가입(Sign Up)' 페이지를 포함하세요.
-          2. 로그인 후 이동할 '대시보드(Dashboard)'나 메인 랜딩 뷰를 포함하세요.
-          3. 각 뷰에 대해 한국어 표시 이름(Display Name), 라우트 경로(/로 시작), 그리고 짧은 설명을 제공하세요.
-          4. 응답은 반드시 한국어로 작성해주세요.
-        `
-        : `
-          Project Name: ${data.name}
-          Description: ${data.description}
-          
-          Act as a senior web architect. Based on the project description, generate a list of 4 to 8 essential page views (routes).
-          
-          IMPORTANT RULES:
-          1. If the app requires user accounts (which most do), YOU MUST include 'Login' and 'Sign Up' pages.
-          2. Include a 'Dashboard' or main landing view after login if applicable.
-          3. For each view, provide a display name, a route path (starting with /), and a brief description.
-        `;
+      
+      // Common context
+      const context = `Project Name: ${data.name}\nDescription: ${data.description}`;
+      
+      // Strict Language Instruction
+      const langInstruction = language === 'ko' 
+        ? "모든 결과값(name, description)은 반드시 **한국어**로 작성하세요."
+        : "All output values (name, description) MUST be in **English**, even if the project description provided above is in Korean or another language.";
+
+      const prompt = `
+        ${context}
+        
+        Act as a senior web architect. Based on the project description, generate a list of 4 to 8 essential page views (routes).
+        
+        IMPORTANT RULES:
+        1. If the app requires user accounts, include 'Login' and 'Sign Up' pages.
+        2. Include a 'Dashboard' or main landing view after login if applicable.
+        3. ${langInstruction}
+        4. For each view, provide:
+           - name: Display name (e.g., 'Home', '로그인')
+           - route: URL path starting with / (e.g., '/login')
+           - description: Brief purpose of the page.
+      `;
 
       const response = await ai.models.generateContent({
         model: model,
@@ -93,9 +92,9 @@ const App: React.FC = () => {
                 items: {
                   type: Type.OBJECT,
                   properties: {
-                    name: { type: Type.STRING, description: "Display name (e.g., 로그인, 대시보드)" },
-                    route: { type: Type.STRING, description: "URL path (e.g., /login)" },
-                    description: { type: Type.STRING, description: "Purpose of this page" },
+                    name: { type: Type.STRING, description: "Display name in the target language" },
+                    route: { type: Type.STRING, description: "URL path" },
+                    description: { type: Type.STRING, description: "Purpose of this page in the target language" },
                   },
                   required: ["name", "route", "description"]
                 }
@@ -158,31 +157,24 @@ const App: React.FC = () => {
 
     try {
       const ai = getAI();
-      const prompt = language === 'ko'
-        ? `
-          페이지 이름: ${view.name}
-          경로: ${view.route}
-          설명: ${view.description}
-          프로젝트 컨텍스트: ${projectData?.name} - ${projectData?.description}
+      
+      const langInstruction = language === 'ko' 
+        ? "각 블록의 라벨(Label)과 설명(Description)은 반드시 **한국어**로 작성하세요."
+        : "Labels and descriptions MUST be in **English**, translating from the input context if necessary.";
 
-          이 특정 페이지를 위한 UI 와이어프레임 청사진(Blueprint)을 생성하세요.
-          이 페이지에 수직으로 배치되어야 할 컴포넌트 목록을 순서대로 반환하세요.
-          
-          사용 가능한 컴포넌트 타입: 'header', 'hero', 'feature', 'form', 'list', 'content', 'gallery', 'cta', 'footer', 'sidebar'.
-          
-          각 블록의 라벨(Label)과 구체적인 설명(Description)은 반드시 **한국어**로 작성하세요.
-        `
-        : `
-          Page Name: ${view.name}
-          Route: ${view.route}
-          Description: ${view.description}
-          Project Context: ${projectData?.name} - ${projectData?.description}
+      const prompt = `
+        Page Name: ${view.name}
+        Route: ${view.route}
+        Description: ${view.description}
+        Project Context: ${projectData?.name} - ${projectData?.description}
 
-          Generate a UI wireframe blueprint for this specific page. 
-          Return a list of ordered components that should appear on this page vertically.
-          
-          Available Component Types: 'header', 'hero', 'feature', 'form', 'list', 'content', 'gallery', 'cta', 'footer', 'sidebar'.
-        `;
+        Generate a UI wireframe blueprint for this specific page. 
+        Return a list of ordered components that should appear on this page vertically.
+        
+        Available Component Types: 'header', 'hero', 'feature', 'form', 'list', 'content', 'gallery', 'cta', 'footer', 'sidebar'.
+        
+        ${langInstruction}
+      `;
 
       const response = await ai.models.generateContent({
         model: model,
@@ -238,33 +230,24 @@ const App: React.FC = () => {
       const ai = getAI();
       const currentLayoutJson = JSON.stringify(view.layout.map(({ type, label, description }) => ({ type, label, description })));
       
-      const prompt = language === 'ko'
-        ? `
-          현재 페이지 이름: ${view.name}
-          현재 레이아웃 구조: ${currentLayoutJson}
-          
-          사용자 수정 요청: "${instruction}"
-          
-          위 사용자 요청을 반영하여 레이아웃을 수정해주세요.
-          필요하다면 컴포넌트를 추가, 삭제, 순서 변경하거나, 설명(description)을 수정하세요.
-          
-          사용 가능한 컴포넌트 타입: 'header', 'hero', 'feature', 'form', 'list', 'content', 'gallery', 'cta', 'footer', 'sidebar'.
-          
-          결과는 전체 레이아웃 리스트로 반환해야 합니다. 설명은 한국어로 작성하세요.
-        `
-        : `
-          Current Page: ${view.name}
-          Current Layout: ${currentLayoutJson}
-          
-          User Instruction: "${instruction}"
-          
-          Modify the layout based on the user instruction.
-          You can add, remove, reorder components, or update descriptions.
-          
-          Available Component Types: 'header', 'hero', 'feature', 'form', 'list', 'content', 'gallery', 'cta', 'footer', 'sidebar'.
-          
-          Return the complete updated layout list.
-        `;
+      const langInstruction = language === 'ko' 
+        ? "결과는 한국어로 작성하세요."
+        : "Output MUST be in English.";
+
+      const prompt = `
+        Current Page: ${view.name}
+        Current Layout: ${currentLayoutJson}
+        
+        User Instruction: "${instruction}"
+        
+        Modify the layout based on the user instruction.
+        You can add, remove, reorder components, or update descriptions.
+        
+        Available Component Types: 'header', 'hero', 'feature', 'form', 'list', 'content', 'gallery', 'cta', 'footer', 'sidebar'.
+        
+        ${langInstruction}
+        Return the complete updated layout list.
+      `;
 
         const response = await ai.models.generateContent({
           model: model,
@@ -328,29 +311,21 @@ const App: React.FC = () => {
          }))
       });
 
-      const prompt = language === 'ko'
-        ? `
-          당신은 까다로운 시니어 PM이자 아키텍트입니다. 다음 프로젝트 구성을 검토해주세요:
-          ${projectSummary}
+      const langInstruction = language === 'ko'
+        ? "반드시 한국어로 답변하세요. 마크다운 형식이 아닌 일반 텍스트로 작성하세요."
+        : "Respond in English. Provide plain text response.";
 
-          1. 프로젝트 설명에 비해 누락된 필수 페이지(예: 비밀번호 찾기, 설정, 마이페이지 등)가 있는지 확인하세요.
-          2. 페이지 간의 흐름이 논리적인지 확인하세요.
-          3. 사용자에게 보완해야 할 점을 **친절하지만 날카롭게** 지적하는 피드백 요약문을 작성하세요.
-          4. 만약 완벽하다면 칭찬과 함께 진행해도 좋다고 말해주세요.
-          
-          답변은 마크다운 형식이 아닌 일반 줄바꿈 텍스트로 작성해주세요.
-        `
-        : `
-          Act as a Senior PM/Architect. Review this project structure:
-          ${projectSummary}
+      const prompt = `
+        Act as a Senior PM/Architect. Review this project structure:
+        ${projectSummary}
 
-          1. Check for missing essential pages based on description (e.g., Forgot Password, Settings, Profile).
-          2. Check if the flow is logical.
-          3. Provide a feedback summary pointing out what needs improvement.
-          4. If perfect, give a thumbs up.
-          
-          Provide plain text response.
-        `;
+        1. Check for missing essential pages based on description (e.g., Forgot Password, Settings, Profile).
+        2. Check if the flow is logical.
+        3. Provide a feedback summary pointing out what needs improvement.
+        4. If perfect, give a thumbs up.
+        
+        ${langInstruction}
+      `;
 
       const response = await ai.models.generateContent({
         model: model,
@@ -378,25 +353,20 @@ const App: React.FC = () => {
         description: v.description
       })));
 
-      const prompt = language === 'ko' 
-        ? `
-          현재 뷰 목록: ${currentViewsSummary}
-          피드백: ${reviewFeedback}
+      const langInstruction = language === 'ko'
+        ? "결과는 JSON 형식이어야 하며, 페이지 이름과 설명은 한국어로 작성하세요."
+        : "Output MUST be JSON. Page names and descriptions MUST be in English.";
 
-          위 피드백 내용을 바탕으로, 기존 뷰 목록에 누락된 페이지(예: 비밀번호 찾기, 설정 등)를 추가하여 **완전한 뷰 목록**을 새로 생성하세요.
-          기존에 존재하던 뷰는 절대 삭제하지 말고 그대로 포함해야 합니다.
-          새로 추가되는 뷰는 적절한 이름과 라우트 경로를 가져야 합니다.
-          JSON 형식으로 반환하세요.
-        `
-        : `
-          Current Views: ${currentViewsSummary}
-          Feedback: ${reviewFeedback}
+      const prompt = `
+        Current Views: ${currentViewsSummary}
+        Feedback: ${reviewFeedback}
 
-          Based on the feedback, generate a COMPLETE list of views by adding any missing pages (e.g., Forgot Password, Settings) to the current list.
-          DO NOT remove any existing views.
-          Ensure new views have appropriate names and routes.
-          Return as JSON.
-        `;
+        Based on the feedback, generate a COMPLETE list of views by adding any missing pages (e.g., Forgot Password, Settings) to the current list.
+        DO NOT remove any existing views.
+        Ensure new views have appropriate names and routes.
+        
+        ${langInstruction}
+      `;
 
       const response = await ai.models.generateContent({
         model: model,
@@ -487,36 +457,11 @@ const App: React.FC = () => {
          hasUploadedImages: !!(v.customFiles && v.customFiles.length > 0)
       })));
 
-      const promptText = language === 'ko' 
-        ? `
-          프로젝트: ${projectData?.name}
-          기술 스택: Backend=${stack.backend}, Database=${stack.database}
-          Frontend: React + TypeScript + Tailwind + Vite (Strict Constraint)
+      const langConstraint = language === 'ko'
+        ? "UI 텍스트, 주석, 그리고 API 문서는 반드시 한국어로 작성되어야 합니다."
+        : "UI text, comments, and API documentation MUST be in English. TRANSLATE any Korean input to English.";
 
-          *** 중요: 멀티모달 이미지 참조 ***
-          이 요청에는 ${imageParts.length}개의 참조 이미지가 포함되어 있습니다.
-          이미지는 사용자가 업로드한 디자인 시안 또는 스케치입니다.
-          AI는 이 이미지들의 시각적 요소(레이아웃, 색상, 배치)를 분석하여, 
-          해당 이미지가 어떤 페이지(예: 로그인, 대시보드 등)에 해당하는지 추론하고,
-          **텍스트 와이어프레임보다 이미지의 디자인을 최우선으로 반영하여 코드를 생성해야 합니다.**
-
-          다음 4가지 결과물을 포함한 JSON을 생성하세요:
-          
-          1. pages: 다음 목록에 있는 **모든 페이지**에 대해 코드를 생성합니다.
-             페이지 목록: ${allPagesSummary}
-             - 각 페이지마다 두 가지 버전을 생성해야 합니다:
-               a. componentName: PascalCase 컴포넌트 이름 (예: UserDashboard)
-               b. tsxCode: 실제 React Function Component 코드.
-                  - **중요**: Next.js 기능(next/link, next/navigation, next/image 등)을 절대 사용하지 마세요.
-                  - 대신 'react-router-dom'의 Link, useNavigate 등을 사용하세요.
-                  - Tailwind CSS로 세련된 디자인을 적용하세요.
-               c. previewHtml: 브라우저에서 바로 볼 수 있는 단독 실행 가능한 HTML 파일 코드 (Tailwind CDN 포함).
-             
-          2. apiSpec: **OpenAPI 3.0 JSON** 포맷으로 작성된 완전한 API 명세서.
-          3. sqlSchema: 선택한 DB(${stack.database})에 맞는 CREATE TABLE SQL 스키마.
-          4. erdMermaid: 데이터베이스 구조를 표현하는 Mermaid.js 다이어그램 코드.
-        `
-        : `
+      const promptText = `
           Project: ${projectData?.name}
           Tech Stack: Backend=${stack.backend}, Database=${stack.database}
           Frontend: React + TypeScript + Tailwind + Vite (Strict Constraint)
@@ -527,6 +472,9 @@ const App: React.FC = () => {
           Analyze the visual elements (layout, color, structure) of these images.
           Infer which page (e.g., Login, Dashboard) each image corresponds to.
           **PRIORITIZE the visual design from the images over the text wireframes.**
+          
+          *** LANGUAGE CONSTRAINT ***
+          ${langConstraint}
 
           Generate a JSON response with these 4 fields:
           
@@ -538,12 +486,12 @@ const App: React.FC = () => {
                   - **IMPORTANT**: DO NOT use Next.js features (next/link, next/navigation, etc.).
                   - Use 'react-router-dom' (Link, useNavigate) instead.
                   - Use Tailwind CSS for modern design.
-               c. previewHtml: Standalone HTML with Tailwind CDN for immediate preview.
+               c. previewHtml: Standalone HTML file. IMPORTANT: You MUST include <script src="https://cdn.tailwindcss.com"></script> in the <head> tag for styling.
 
           2. apiSpec: Complete API specification in **OpenAPI 3.0 JSON** format.
           3. sqlSchema: CREATE TABLE SQL schema for ${stack.database}.
           4. erdMermaid: Mermaid.js diagram code for the ERD.
-        `;
+      `;
 
       // Construct Multimodal Content
       const contents = [
